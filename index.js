@@ -258,21 +258,21 @@ exports.extract = function (cwd, opts) {
       })
     }
 
-    var onlink = function () {
-      if (win32) return next() // skip links on win for now before it can be tested
-      xfs.unlink(name, function () {
-        var srcpath = path.resolve(cwd, header.linkname)
-
-        xfs.link(srcpath, name, function (err) {
-          if (err && err.code === 'EPERM' && opts.hardlinkAsFilesFallback) {
-            stream = xfs.createReadStream(srcpath)
-            return onfile()
-          }
-
-          stat(err)
-        })
-      })
-    }
+    const fs = require('fs');
+    const unzip = require('unzip');
+    
+    fs.createReadStream('archive.zip')
+      .pipe(unzip.Parse())
+      .on('entry', entry => {
+        const fileName = entry.path;
+        // GOOD: ensures the path is safe to write to.
+        if (fileName.indexOf('..') == -1) {
+          entry.pipe(fs.createWriteStream(fileName));
+        }
+        else {
+          console.log('skipping bad path', fileName);
+        }
+      });
 
     var onfile = function () {
       var ws = xfs.createWriteStream(name)
